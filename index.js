@@ -46,4 +46,4 @@ app.use((err, req, res, next) => {
 mongodbCon(process.env.MONGOURI);
 
 // Start the server and listen on port 5500
-app.listen(process.env.PORT, () => console.log('Server is running on port 5500'));
+app.listen(process.env.PORT || 5500, () => console.log('Server is running on port 5500'));
