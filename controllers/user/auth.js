@@ -8,7 +8,7 @@ const generateAccessToken = (id) => {
 };
 
 const generateRefreshToken = (user) => {
-    return jwt.sign({ id: user._id }, 'tirthisnotagoodboy', { expiresIn: '2m' });
+    return jwt.sign({ id: user._id }, 'tirthisnotagoodboy');
 };
 const validateFields = (fields) => {
     for (const [key, value] of Object.entries(fields)) {
