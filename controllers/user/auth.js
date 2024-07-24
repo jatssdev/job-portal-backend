@@ -3,7 +3,13 @@ const User = require('../../models/Usermodel');
 const ErrorHandler = require('../../middleware/errorHandler');
 const sendMail = require('../../configs/nodeMailer');
 const otpGenerator = require('otp-generator');
+const generateAccessToken = (id) => {
+    return jwt.sign({ id }, 'tirthisagoodboy', { expiresIn: '1m' });
+};
 
+const generateRefreshToken = (user) => {
+    return jwt.sign({ id: user._id }, 'tirthisnotagoodboy', { expiresIn: '2m' });
+};
 const validateFields = (fields) => {
     for (const [key, value] of Object.entries(fields)) {
         if (!value) {
@@ -12,6 +18,10 @@ const validateFields = (fields) => {
     }
 };
 
+const refreshToken = (token) => {
+    let decoded = jwt.decode(token, 'tirthisnotagoodboy')
+    console.log(decoded)
+}
 const RegisterUser = async (req, res, next) => {
     try {
         const { firstName, lastName, userName, email, password, confirmPassword, phoneNumber } = req.body;
@@ -65,8 +75,10 @@ const RegisterUser = async (req, res, next) => {
 const LoginUser = async (req, res, next) => {
     try {
         const { email, password } = req.body;
+
         // Validate the incoming data
         validateFields({ email, password });
+
         // Find the user by email
         const user = await User.findOne({ email });
         if (!user) {
@@ -79,16 +91,27 @@ const LoginUser = async (req, res, next) => {
             throw new ErrorHandler('Invalid password', 401);
         }
 
-        // Generate JWT token for authentication
-        const token = jwt.sign({ userId: user._id }, 'jatinisbestcoderintheworld', { expiresIn: '15d' });
+        // Generate JWT tokens for authentication
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
 
-        return res.status(200)
-            .cookie('token', token, { maxAge: 15 * 24 * 60 * 60000, httpOnly: true }) // Set cookie with token
-            .json({ success: true, token, user: user }); // Send token in the response body
+        // Set cookies with tokens
+        res.cookie('accessToken', accessToken, {
+            maxAge: 15 * 60 * 1000, // 15 minutes
+            httpOnly: true,
+
+        });
+
+        res.cookie('refreshToken', refreshToken, {
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            httpOnly: true,
+
+        });
+
+
+        return res.status(200).json({ success: true, user });
 
     } catch (error) {
-
-
         next(error); // Pass errors to custom error handler
     }
 };
@@ -203,4 +226,4 @@ const checkAuth = (req, res, next) => {
     res.status(200).json({ success: true, user, message: 'user authenticated!' })
 };
 
-module.exports = { checkAuth, logoutUser, RegisterUser, changePassword, LoginUser, forgotPassword, verifyOtpAndResetPassword };
+module.exports = { checkAuth, generateAccessToken, generateRefreshToken, refreshToken, logoutUser, RegisterUser, changePassword, LoginUser, forgotPassword, verifyOtpAndResetPassword };
